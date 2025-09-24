@@ -38,9 +38,8 @@ class JrppPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
         
-        # --- 这是修正的地方 ---
-        # 遵循文档，将数据存储在 data 目录下。
-        # get_data_dir() 方法应该从 self (插件实例) 调用，而不是 self.context
+        # --- 最终修正 ---
+        # 获取插件专属数据目录的唯一正确方法，是通过 self (插件实例) 调用
         plugin_data_dir = self.get_data_dir()
         plugin_data_dir.mkdir(exist_ok=True) # 确保目录存在
         db_path = plugin_data_dir / "jrrp.db"
@@ -53,8 +52,6 @@ class JrppPlugin(Star):
     def _init_db(self):
         """初始化数据库，创建表"""
         cursor = self.conn.cursor()
-        # 创建一个表来存储 user_id, date, 和 luck_value
-        # 使用 (user_id, date)作为联合主键，天然保证一人一天只能有一条记录
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS jrrp (
                 user_id TEXT NOT NULL,
@@ -73,12 +70,10 @@ class JrppPlugin(Star):
         
         cursor = self.conn.cursor()
         
-        # 检查今天是否已经生成过
         cursor.execute("SELECT luck_value FROM jrrp WHERE user_id = ? AND date = ?", (user_id, today_str))
         result = cursor.fetchone()
         
         if result:
-            # 如果今天已经生成过，直接返回之前的值
             luck = result[0]
             description = _get_luck_description(luck)
             reply = (
@@ -89,11 +84,9 @@ class JrppPlugin(Star):
             yield event.plain_result(reply)
             return
 
-        # 如果是今天第一次，生成新的人品值
         luck = random.randint(1, 100)
         description = _get_luck_description(luck)
         
-        # 将新纪录存入数据库
         try:
             cursor.execute("INSERT INTO jrrp (user_id, date, luck_value) VALUES (?, ?, ?)", (user_id, today_str, luck))
             self.conn.commit()
