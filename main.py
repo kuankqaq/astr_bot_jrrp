@@ -29,7 +29,7 @@ def get_jrrp_text(jrrp):
             return text
     return "这个人今天还没测过人品"
 
-@register("jrrp", "kuank", "一个每日生成一次人品值的插件", "1.0.5", "https://github.com/kuankqaq/astr_bot_jrrp")
+@register("jrrp", "kuank", "一个每日生成一次人品值的插件", "1.0.6", "https://github.com/kuankqaq/astr_bot_jrrp")
 class JrppPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
