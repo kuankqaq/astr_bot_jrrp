@@ -1,108 +1,76 @@
-import random
-import sqlite3
-from pathlib import Path
+import os
+import json
 from datetime import datetime
-
-# 严格遵循官方文档，从正确的 `astrbot.api` 路径导入所需模块
+import random
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
-from astrbot.api import logger
 
-def _get_luck_description(luck: int) -> str:
-    """根据人品值返回对应的配文"""
-    if luck == 100:
-        return "✨ 欧皇附体！今天你就是天选之子，做什么都顺！✨"
-    elif luck >= 90:
-        return "🎉 吉星高照！今天运气爆棚，快去买张彩票吧！"
-    elif luck >= 75:
-        return "👍 顺风顺水！今天是个好日子，事事顺心。"
-    elif luck >= 60:
-        return "👌 平平稳稳！普通的一天，保持平常心就好。"
-    elif luck >= 40:
-        return "🤔 稍安勿躁。今天可能会遇到点小麻烦，问题不大。"
-    elif luck >= 20:
-        return "😥 诸事不宜！今天还是摸鱼吧，别搞大事。"
-    elif luck >= 1:
-        return "😭 非酋本酋！今天出门记得看黄历，小心行事！"
-    else:
-        return "数值异常，你的人品可能超越了三界！"
+# 人品值文案
+jrrp_text = {
+    (0, 10): "今天还是待在家里吧,免得发生意外...",
+    (11, 20): "看来你今天运气不怎么样",
+    (21, 30): "emm...我该怎么说呢...",
+    (31, 40): "一般般吧,不能再多了",
+    (41, 50): "还行,不算太差",
+    (51, 60): "及格了,再接再厉",
+    (61, 70): "运气不错,可以出去走走",
+    (71, 80): "哇,今天的运气很棒",
+    (81, 90): "今天的运气爆棚了,快去抽卡",
+    (91, 100): "!!!你就是天选之子!!!",
+}
 
-@register(
-    "jrrp",  # 插件ID
-    "kuank",  # 你的名字
-    "一个每日生成一次人品值的插件",  # 描述
-    "1.0.0",  # 版本
-    "https://github.com/kuankqaq/astr_bot_jrrp"  # 你的仓库地址
-)
-class JrppPlugin(Star):
+def get_jrrp_text(jrrp):
+    for (min_val, max_val), text in jrrp_text.items():
+        if min_val <= jrrp <= max_val:
+            return text
+    return "这个人今天还没测过人品"
+
+@register("jrrp", "kuank", "一个每日生成一次人品值的插件", "1.0.0", "https://github.com/kuankqaq/astr_bot_jrrp")
+class JrrpPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
+        # --- 修改部分 开始 ---
+        # 插件数据应存储在 'data/' 下的专属文件夹中
+        # 移除不存在的 self.context.get_data_dir()
+        self.data_dir = "data/jrrp"
+        self.jrrp_file = os.path.join(self.data_dir, "jrrp.json")
         
-        # --- 最终修正 ---
-        # 获取插件专属数据目录的唯一正确方法，是通过 self (插件实例) 调用
-        plugin_data_dir = self.get_data_dir()
-        plugin_data_dir.mkdir(exist_ok=True) # 确保目录存在
-        db_path = plugin_data_dir / "jrrp.db"
-        
-        logger.info(f"今日人品插件数据库路径: {db_path}")
-        
-        self.conn = sqlite3.connect(db_path)
-        self._init_db()
-
-    def _init_db(self):
-        """初始化数据库，创建表"""
-        cursor = self.conn.cursor()
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS jrrp (
-                user_id TEXT NOT NULL,
-                date TEXT NOT NULL,
-                luck_value INTEGER NOT NULL,
-                PRIMARY KEY (user_id, date)
-            );
-        ''')
-        self.conn.commit()
+        # 确保数据目录和文件存在
+        if not os.path.exists(self.data_dir):
+            os.makedirs(self.data_dir)
+        if not os.path.exists(self.jrrp_file):
+            with open(self.jrrp_file, 'w', encoding='utf-8') as f:
+                json.dump({}, f, ensure_ascii=False, indent=4)
+        # --- 修改部分 结束 ---
 
     @filter.command("jrrp", alias={'今日人品'})
-    async def handle_jrrp(self, event: AstrMessageEvent):
-        """处理 jrrp 或 今日人品 命令"""
-        user_id = event.get_sender_id()
-        today_str = datetime.now().strftime('%Y-%m-%d')
+    async def jrrp(self, event: AstrMessageEvent):
+        qq = event.get_sender_id()
+        today = str(datetime.now().date())
         
-        cursor = self.conn.cursor()
-        
-        cursor.execute("SELECT luck_value FROM jrrp WHERE user_id = ? AND date = ?", (user_id, today_str))
-        result = cursor.fetchone()
-        
-        if result:
-            luck = result[0]
-            description = _get_luck_description(luck)
-            reply = (
-                f"你今天的人品是【{luck}】！\n"
-                f"{description}\n\n"
-                "今天已经测过了哦，明天再来吧！"
-            )
-            yield event.plain_result(reply)
-            return
+        with open(self.jrrp_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
 
-        luck = random.randint(1, 100)
-        description = _get_luck_description(luck)
-        
-        try:
-            cursor.execute("INSERT INTO jrrp (user_id, date, luck_value) VALUES (?, ?, ?)", (user_id, today_str, luck))
-            self.conn.commit()
+        if qq not in data or data[qq]['date'] != today:
+            # 今天还没记录，生成新的人品值
+            new_jrrp = random.randint(0, 100)
             
-            reply = (
-                f"你今天的人品是【{luck}】！\n"
-                f"{description}"
-            )
-            yield event.plain_result(reply)
-
-        except Exception as e:
-            logger.error(f"写入jrrp数据时出错: {e}")
-            yield event.plain_result("哎呀，运势数据库出了点问题，请稍后再试！")
-
-    async def terminate(self):
-        """插件卸载时关闭数据库连接"""
-        if self.conn:
-            self.conn.close()
-            logger.info("今日人品插件数据库连接已关闭。")
+            # --- 特殊修正 ---
+           # if qq == "": # 这是 kuank
+            #    new_jrrp = 100
+           # elif qq == "": # 这是屑老板
+            #    new_jrrp = 0
+            
+            data[qq] = {
+                'date': today,
+                'jrrp': new_jrrp
+            }
+            with open(self.jrrp_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+        
+        user_jrrp = data[qq]['jrrp']
+        user_name = event.get_sender_name()
+        text = get_jrrp_text(user_jrrp)
+        
+        message = f"{user_name} 今天的人品值是: {user_jrrp}\n{text}"
+        yield event.plain_result(message)
