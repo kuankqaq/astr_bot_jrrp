@@ -1,9 +1,11 @@
-import os
 import json
 from datetime import datetime
 import random
+
+# 导入 AstrBot 的 API
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
+from astrbot.api import logger # 导入官方 logger
 
 # 人品值文案
 jrrp_text = {
@@ -20,55 +22,45 @@ jrrp_text = {
 }
 
 def get_jrrp_text(jrrp):
+    """根据人品值获取对应的文案"""
     for (min_val, max_val), text in jrrp_text.items():
         if min_val <= jrrp <= max_val:
             return text
     return "这个人今天还没测过人品"
 
-@register("jrrp", "kuank", "一个每日生成一次人品值的插件", "1.0.0", "https://github.com/kuankqaq/astr_bot_jrrp")
-class JrrpPlugin(Star):
+@register("jrrp", "kuank", "一个每日生成一次人品值的插件", "1.0.5", "https://github.com/kuankqaq/astr_bot_jrrp")
+class JrppPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
-        # --- 修改部分 开始 ---
-        # 插件数据应存储在 'data/' 下的专属文件夹中
-        # 移除不存在的 self.context.get_data_dir()
-        self.data_dir = "data/jrrp"
-        self.jrrp_file = os.path.join(self.data_dir, "jrrp.json")
-        
-        # 确保数据目录和文件存在
-        if not os.path.exists(self.data_dir):
-            os.makedirs(self.data_dir)
-        if not os.path.exists(self.jrrp_file):
-            with open(self.jrrp_file, 'w', encoding='utf-8') as f:
-                json.dump({}, f, ensure_ascii=False, indent=4)
-        # --- 修改部分 结束 ---
+        # 初始化一个空字典，用于在内存中存储数据
+        self.jrrp_data = {}
+        logger.info("Jrrp 插件 (内存存储版) 加载成功。数据将在重启后重置。")
 
     @filter.command("jrrp", alias={'今日人品'})
     async def jrrp(self, event: AstrMessageEvent):
-        qq = event.get_sender_id()
+        """处理 /jrrp 指令"""
+        user_id = event.get_sender_id()
         today = str(datetime.now().date())
-        
-        with open(self.jrrp_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
 
-        if qq not in data or data[qq]['date'] != today:
-            # 今天还没记录，生成新的人品值
+        # 检查内存中的数据，而不是文件
+        if user_id not in self.jrrp_data or self.jrrp_data[user_id].get('date') != today:
+            # 如果今天没有记录，就生成新的人品值
             new_jrrp = random.randint(0, 100)
             
             # --- 特殊修正 ---
-            #if qq == "1303837926": # 这是 kuank
-             #   new_jrrp = 100
-            #elif qq == "1794009383": # 这是屑老板
-             #   new_jrrp = 0
+         #   if user_id == "1303837926": # kuank
+          #      new_jrrp = 100
+           # elif user_id == "1794009383": # 屑老板
+            #    new_jrrp = 0
             
-            data[qq] = {
+            # 将新的人品值存入内存的字典中
+            self.jrrp_data[user_id] = {
                 'date': today,
                 'jrrp': new_jrrp
             }
-            with open(self.jrrp_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
         
-        user_jrrp = data[qq]['jrrp']
+        # 从内存中获取数据并准备回复消息
+        user_jrrp = self.jrrp_data[user_id]['jrrp']
         user_name = event.get_sender_name()
         text = get_jrrp_text(user_jrrp)
         
