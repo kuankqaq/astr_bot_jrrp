@@ -37,8 +37,11 @@ def _get_luck_description(luck: int) -> str:
 class JrppPlugin(Star):
     def __init__(self, context: Context):
         super().__init__(context)
-        # 遵循文档，将数据存储在 data 目录下
-        plugin_data_dir = self.context.get_data_dir()
+        
+        # --- 这是修正的地方 ---
+        # 遵循文档，将数据存储在 data 目录下。
+        # get_data_dir() 方法应该从 self (插件实例) 调用，而不是 self.context
+        plugin_data_dir = self.get_data_dir()
         plugin_data_dir.mkdir(exist_ok=True) # 确保目录存在
         db_path = plugin_data_dir / "jrrp.db"
         
