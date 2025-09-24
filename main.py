@@ -31,7 +31,7 @@ def _get_luck_description(luck: int) -> str:
     "jrrp",  # 插件ID
     "kuank",  # 你的名字
     "一个每日生成一次人品值的插件",  # 描述
-    "1.0.0",  # 版本
+    "1.0.4",  # 版本
     "https://github.com/kuankqaq/astr_bot_jrrp"  # 你的仓库地址
 )
 class JrppPlugin(Star):
