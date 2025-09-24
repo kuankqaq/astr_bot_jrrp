@@ -56,10 +56,10 @@ class JrrpPlugin(Star):
             new_jrrp = random.randint(0, 100)
             
             # --- 特殊修正 ---
-           # if qq == "": # 这是 kuank
-            #    new_jrrp = 100
-           # elif qq == "": # 这是屑老板
-            #    new_jrrp = 0
+            #if qq == "1303837926": # 这是 kuank
+             #   new_jrrp = 100
+            #elif qq == "1794009383": # 这是屑老板
+             #   new_jrrp = 0
             
             data[qq] = {
                 'date': today,
