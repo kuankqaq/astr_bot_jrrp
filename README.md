@@ -22,8 +22,7 @@ astrbot/plugins/jrrp
 ```
 
 ### 2. 运行 AstrBot
-启动 AstrBot，插件会自动加载：
-日志中应能看到：
+启动 AstrBot，插件会自动加载,日志中应能看到：
 ```
 Jrrp 插件 (JSON持久化版) 加载成功。数据已从文件加载。
 ```
@@ -42,9 +41,9 @@ Jrrp 插件 (JSON持久化版) 加载成功。数据已从文件加载。
 ---
 
 ## 文件说明
-- `test.py`：插件主文件，包含指令逻辑与数据管理。
+- `main.py`：插件主文件，包含指令逻辑与数据管理。
 - `data/jrrp_data.json`：自动生成的数据文件，保存用户人品值与日期。
-
+- `example_special_rules.py`: 含特殊用户规则的插件程序
 ---
 
 ## 自定义
@@ -69,8 +68,8 @@ SPECIAL_RULES = {
 ```python
 new_jrrp: int = SPECIAL_RULES.get(user_id, lambda: random.randint(0, 100))()
 ```
-这样可以灵活为特定用户设定规则，其余用户依然正常随机。
-示例在仓库的中的example_special_rules.py 有展示
+- 这样可以灵活为特定用户设定规则，其余用户依然正常随机。
+- 示例在仓库的中的example_special_rules.py 有展示
 ---
 
 ## 依赖
