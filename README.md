@@ -23,9 +23,6 @@ astrbot/plugins/jrrp
 
 ### 2. 运行 AstrBot
 启动 AstrBot，插件会自动加载：
-```bash
-python run.py
-```
 日志中应能看到：
 ```
 Jrrp 插件 (JSON持久化版) 加载成功。数据已从文件加载。
@@ -35,10 +32,6 @@ Jrrp 插件 (JSON持久化版) 加载成功。数据已从文件加载。
 用户可以输入以下指令：
 ```
 /jrrp
-```
-或者中文别名：
-```
-今日人品
 ```
 机器人会返回类似结果：
 ```
@@ -67,9 +60,9 @@ jrrp_text = {
 如果想让某些用户始终生成固定的人品值，可以在代码中加入类似的配置：
 ```python
 SPECIAL_RULES = {
-    "2992906024": lambda: 100,  # 用户 ID 为 2992906024 的用户固定 100
-    "2467360742": lambda: 0,    # 用户 ID 为 2467360742 的用户固定 0
-    "166681187": lambda: random.choice([0, random.randint(0, 100)])  # 用户 ID 为 166681187 的用户有概率为 0
+    "123456789": lambda: 100,  # 用户 ID 为 123456789 的用户固定 100
+    "114541": lambda: 0,    # 用户 ID 为 114514 的用户固定 0
+    "1919810": lambda: random.choice([0, random.randint(0, 100)])  # 用户 ID 为 1919810 的用户有概率为 0
 }
 ```
 并在生成逻辑中引用：
@@ -77,7 +70,7 @@ SPECIAL_RULES = {
 new_jrrp: int = SPECIAL_RULES.get(user_id, lambda: random.randint(0, 100))()
 ```
 这样可以灵活为特定用户设定规则，其余用户依然正常随机。
-
+示例在仓库的中的example_special_rules.py 有展示
 ---
 
 ## 依赖
