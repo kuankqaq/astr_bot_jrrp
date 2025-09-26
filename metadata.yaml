@@ -1,5 +1,5 @@
-name: jrrp_lite
-desc: 一个只有今日人品功能的轻量级插件，数据重启后自动清除，每人每天只能随机生成一次，除此外调用第一次数据，欢迎pr~
-version: v1.0.6
-author: kuank
-repo: https://github.com/kuankqaq/astr_bot_jrrp 
+name: 今日人品插件(json持久化版)
+desc: 基于https://github.com/kuankqaq/astr_bot_jrrp 该插件修改 添加了一些功能 做了持久化" 
+version: v0.0.1
+author: jinyiwei2012
+repo: :https://github.com/jinyiwei2012/astr_bot_jrrp
