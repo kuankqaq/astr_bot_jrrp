@@ -1,15 +1,15 @@
 import json
-from datetime import datetime
 import random
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any
 
-# 导入 AstrBot 的 API
 from astrbot.api.event import filter, AstrMessageEvent
 from astrbot.api.star import Context, Star, register
-from astrbot.api import logger # 导入官方 logger
+from astrbot.api import logger
 
-# 人品值文案
-# 人品值文案
-jrrp_text = {
+# 人品值文案（完整）
+jrrp_text: Dict[int, str] = {
     0: "今日运势：凶 ⚠️ 诸事不宜，建议宅家保平安",
     1: "今日运势：凶 ⚠️ 运势极差，避免任何冒险",
     2: "今日运势：凶 ⚠️ 容易发生冲突，保持冷静",
@@ -113,41 +113,73 @@ jrrp_text = {
     100: "今日运势：天命之子 🏆 天选之人，无所不能",
 }
 
-def get_jrrp_text(jrrp):
+
+def get_jrrp_text(jrrp: int) -> str:
     """根据人品值获取对应的文案"""
-    for val, text in jrrp_text.items():
-        if  val==jrrp:
-            return text
-    return "这个人今天还没测过人品"
+    return jrrp_text.get(jrrp, "这个人今天还没测过人品")
+
+
+def get_data_file_path() -> Path:
+    """获取数据文件路径"""
+    plugin_dir = Path(__file__).parent
+    data_dir = plugin_dir / "data"
+    data_dir.mkdir(exist_ok=True)
+    return data_dir / "jrrp_data.json"
+
+
+def load_jrrp_data() -> Dict[str, Any]:
+    """从JSON文件加载数据，如果日期不是今天则重置"""
+    today = str(datetime.now().date())
+    try:
+        data_file = get_data_file_path()
+        if data_file.exists():
+            with open(data_file, 'r', encoding='utf-8') as f:
+                data: Dict[str, Any] = json.load(f)
+                if data.get('last_updated_date') != today:
+                    logger.info("检测到日期变更，重置人品数据")
+                    return {'last_updated_date': today, 'users': {}}
+                return data
+        return {'last_updated_date': today, 'users': {}}
+    except Exception as e:
+        logger.error(f"加载人品数据失败: {e}")
+        return {'last_updated_date': today, 'users': {}}
+
+
+def save_jrrp_data(data: Dict[str, Any]) -> None:
+    """保存数据到JSON文件，并更新日期"""
+    try:
+        data['last_updated_date'] = str(datetime.now().date())
+        with open(get_data_file_path(), 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"保存人品数据失败: {e}")
+
 
 @register("jrrp", "kuank", "一个每日生成一次人品值的插件", "1.0.6", "https://github.com/kuankqaq/astr_bot_jrrp")
-class JrppPlugin(Star):
+class JrrpPlugin(Star):
+    """Jrrp 插件：每日生成并持久化保存用户人品值"""
+
     def __init__(self, context: Context):
         super().__init__(context)
-        # 初始化一个空字典，用于在内存中存储数据
-        self.jrrp_data = {}
-        logger.info("Jrrp 插件 (内存存储版) 加载成功。数据将在重启后重置。")
+        self.jrrp_data: Dict[str, Any] = load_jrrp_data()
+        logger.info("Jrrp 插件 (JSON持久化版) 加载成功。数据已从文件加载。")
 
     @filter.command("jrrp", alias={'今日人品'})
     async def jrrp(self, event: AstrMessageEvent):
-        """处理 /jrrp 指令"""
-        user_id = event.get_sender_id()
-        today = str(datetime.now().date())
+        """处理 /jrrp 指令，生成或返回用户今日人品值"""
+        user_id: str = event.get_sender_id()
+        today: str = str(datetime.now().date())
 
-        # 检查内存中的数据，而不是文件
-        if user_id not in self.jrrp_data or self.jrrp_data[user_id].get('date') != today:
-            # 如果今天没有记录，就生成新的人品值
-            new_jrrp = random.randint(0, 100)
-            # 将新的人品值存入内存的字典中
-            self.jrrp_data[user_id] = {
-                'date': today,
-                'jrrp': new_jrrp
-            }
-        
-        # 从内存中获取数据并准备回复消息
-        user_jrrp = self.jrrp_data[user_id]['jrrp']
-        user_name = event.get_sender_name()
-        text = get_jrrp_text(user_jrrp)
-        
-        message = f"{user_name} 今天的人品值是: {user_jrrp}\n{text}"
+        if self.jrrp_data.get('last_updated_date') != today:
+            self.jrrp_data = {'last_updated_date': today, 'users': {}}
+            save_jrrp_data(self.jrrp_data)
+
+        user_data: Dict[str, Any] = self.jrrp_data['users'].get(user_id, {})
+        if user_data.get('date') != today:
+            new_jrrp: int = random.randint(0, 100)
+            self.jrrp_data['users'][user_id] = {'date': today, 'jrrp': new_jrrp}
+            save_jrrp_data(self.jrrp_data)
+
+        user_jrrp: int = self.jrrp_data['users'][user_id]['jrrp']
+        message: str = f"{event.get_sender_name()} 今天的人品值是: {user_jrrp}\n{get_jrrp_text(user_jrrp)}"
         yield event.plain_result(message)
