@@ -1,5 +1,5 @@
 name: 今日人品插件(json持久化版)
-desc: 基于https://github.com/kuankqaq/astr_bot_jrrp 该插件修改,添加了一些功能,做了持久化.
-version: v1.0.0
-author: jinyiwei2012
-repo: https://github.com/jinyiwei2012/astr_bot_jrrp
+desc: jrrp功能改进版，感谢jinyiwei2012的pr
+version: v1.1.0
+author: kuankqaq
+repo: https://github.com/kuankqaq/astr_bot_jrrp
